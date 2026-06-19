@@ -1,9 +1,6 @@
-pandas==3.0.3
-streamlit==1.56.0
-ipython==8.12.3
-openpyxl==3.1.5
-xlsxwriter==3.2.9
-PyMuPDF==1.27.2
-pdfplumber==1.11.9
+streamlit==1.46.1
+pandas==2.3.0
+pdfplumber==0.11.7
 PyPDF2==3.0.1
-pdfreader==0.1.15
+reportlab==4.4.2
+openpyxl==3.1.5
