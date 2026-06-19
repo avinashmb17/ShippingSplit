@@ -3,10 +3,13 @@ import pandas as pd
 import pdfplumber
 import re
 import os
+import tempfile
+import zipfile
 
 from PyPDF2 import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
 from io import BytesIO
+
 
 
 # =====================================================
@@ -310,16 +313,18 @@ def get_filename_from_excel(df, value, column):
 
 def split_pdf_and_search_excel(
     uploaded_files,
-    excel_file,
-    base_path
+    excel_file
 ):
 
     global report_rows
     report_rows = []
 
-    output_dir = os.path.join(base_path, "OUTPUT")
-    os.makedirs(output_dir, exist_ok=True)
+    temp_dir = tempfile.mkdtemp()
 
+    output_dir = os.path.join(temp_dir, "OUTPUT")
+
+    os.makedirs(output_dir, exist_ok=True)
+ 
     df = pd.read_excel(excel_file, sheet_name="Sheet1")
     df.columns = df.columns.str.strip()
 
@@ -462,7 +467,30 @@ def split_pdf_and_search_excel(
     output_excel = os.path.join(output_dir, "PDF_REPORT.xlsx")
 
     report_df.to_excel(output_excel, index=False)
+    zip_buffer = BytesIO()
 
+    with zipfile.ZipFile(
+    zip_buffer,
+    "w",
+    zipfile.ZIP_DEFLATED
+    ) as zipf:
+
+        for root, dirs, files in os.walk(output_dir):
+
+            for file in files:
+
+                file_path = os.path.join(root, file)
+
+                zipf.write(
+                    file_path,
+                    arcname=file
+                )
+
+        zip_buffer.seek(0)
+
+    return zip_buffer
+    
+    
     st.success(f"Excel Saved: {output_excel}")
 def extract_charges(company, text):
 
@@ -596,32 +624,17 @@ excel_file = st.sidebar.file_uploader(
 
 if uploaded_files and excel_file:
 
-    base_path = st.text_input(
-        "Enter Base Folder Path (Example: Z:\\PDF\\)"
-    )
-
     if st.button("Split PDF"):
+        st.session_state.zip_file = split_pdf_and_search_excel(
+            uploaded_files,
+            excel_file
+        )
 
-        if not base_path:
-            st.error(
-                "Please enter a base folder path like Z:\\PDF\\"
-            )
+if "zip_file" in st.session_state:
 
-        else:
-
-            split_pdf_and_search_excel(
-                uploaded_files,
-                excel_file,
-                base_path
-            )
-
-            st.success(
-                "Completed Successfully"
-            )
-
-else:
-
-    st.info(
-        "Upload PDF and Excel file"
+    st.download_button(
+        "📥 Download ZIP",
+        data=st.session_state.zip_file,
+        file_name="PDF_OUTPUT.zip",
+        mime="application/zip"
     )
-
